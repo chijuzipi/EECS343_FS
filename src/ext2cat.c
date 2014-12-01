@@ -23,14 +23,13 @@ int main(int argc, char ** argv) {
         printf("cat: %s does not exist\n", file_path);
         return 1;
     }
-    else
-      printf("the inode number is %d\n", target_ino_num);
+
     struct ext2_inode * target_ino = get_inode(fs, target_ino_num);
 
     __u32 block_size = get_block_size(fs);
     __u32 size = target_ino->i_size;
-      printf("the block size is %d\n", block_size);
-      printf("the size is %d\n", size);
+      //printf("the block size is %d\n", block_size);
+      //printf("the size is %d\n", size);
     __u32 bytes_read = 0;
     void * buf = calloc(size, 1);
     void * buf2 = calloc(size, 1);
@@ -47,16 +46,21 @@ int main(int argc, char ** argv) {
         memcpy(buf + bytes_read, block, bytes_to_read);
         bytes_read += bytes_to_read;
     }
-
+    
+    /* check if the readed byte is smaller than the file size */
+    /* go to indirect block if it does */
     if (bytes_read < size){
       for (int i = 0; i < EXT2_IND_BLOCK; i++) {
+
+        /* the indirect pointer start after direct block, which is 12 */
         void * pointer_block = get_block(fs, target_ino->i_block[12]);
           __u32 offset = 0;
+
+          /* iterative until the size is matched */
           while (bytes_read < size){
 
             int * address = pointer_block + offset;
             bytes_left = size - bytes_read;
-            //printf("the bytes_left is %d\n", bytes_left);
             if (bytes_left == 0) break;
             __u32 bytes_to_read = bytes_left > block_size ? block_size : bytes_left;
             void * block = get_block(fs, * address);
@@ -67,7 +71,8 @@ int main(int argc, char ** argv) {
               break;
           }
 
-          FILE *f = fopen("img.jpg", "w");
+          /* redirect the output to a file named img.jpg */
+          FILE *f = fopen("output.jpg", "w");
           if (f == NULL)
           {
               printf("Error opening file!\n");
@@ -76,13 +81,13 @@ int main(int argc, char ** argv) {
           fwrite(buf, 1, bytes_read, f);
           fclose(f);
 
-          //write(1, buf, bytes_read);
           return 0;
-      }//end of for
-    }//end of if
-    else{
+      }
+    }
 
-          FILE *f = fopen("img.jpg", "w");
+    else{
+          /* redirect the output to a file named img.jpg */
+          FILE *f = fopen("output.jpg", "w");
           if (f == NULL)
           {
               printf("Error opening file!\n");
@@ -91,7 +96,6 @@ int main(int argc, char ** argv) {
           fwrite(buf, 1, bytes_read, f);
           fclose(f);
     }
-      //write(1, buf, bytes_read);
   return 0;
 }
 

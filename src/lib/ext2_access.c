@@ -5,7 +5,7 @@
 // This header allows your project to link against the reference library. If you
 // complete the entire project, you should be able to remove this directive and
 // still compile your code.
-#include "reference_implementation.h"
+//#include "reference_implementation.h"
 
 // Definitions for ext2cat to compile against.
 #include "ext2_access.h"
@@ -18,27 +18,27 @@
 
 // Return a pointer to the primary superblock of a filesystem.
 struct ext2_super_block * get_super_block(void * fs) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_super_block(fs);
-    return (struct ext2_super_block *) (fs + SUPERBLOCK_OFFSET);
+    struct ext2_super_block * super;
+    super = fs + SUPERBLOCK_OFFSET;
+    return super;
 }
 
 
 // Return the block size for a filesystem.
 __u32 get_block_size(void * fs) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_block_size(fs);
-    return 1024 << get_super_block(fs)->s_log_block_size;
+    __u32 size;
+    size = get_super_block(fs)->s_log_block_size;
+    size = 1024 << size;
+    return size;
 }
 
 
 // Return a pointer to a block given its number.
 // get_block(fs, 0) == fs;
 void * get_block(void * fs, __u32 block_num) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_block(fs, block_num);
     __u32 block_size = get_block_size(fs);
-    return fs + (block_num * block_size);
+    void * block_p = fs + (block_num * block_size);
+    return block_p;
 }
 
 
@@ -46,11 +46,12 @@ void * get_block(void * fs, __u32 block_num) {
 // ext2 filesystems will have several of these, but, for simplicity, we will
 // assume there is only one.
 struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_block_group(fs, block_group_num);
+    
     __u32 block_size = get_block_size(fs);
     __u32 bgd_block = (SUPERBLOCK_OFFSET / block_size) + 1;
-    return (struct ext2_group_desc *) get_block(fs, bgd_block); 
+    struct ext2_group_desc * egd;
+    egd = get_block(fs, bgd_block);
+    return egd;
 }
 
 
@@ -58,13 +59,17 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // would require finding the correct block group, but you may assume it's in the
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_inode(fs, inode_num);
+/*
     struct ext2_group_desc * bgd = get_block_group(fs, 0);
     __u32 inode_table_block = bgd->bg_inode_table;
     struct ext2_inode * inode_table = get_block(fs, inode_table_block);
     // Since inode 0 doesn't ever exist, the table starts from 1.
     return inode_table + inode_num - 1;
+*/
+    struct ext2_group_desc * bgd = get_block_group(fs, 0);
+    __u32 inode_table_block = bgd->bg_inode_table;
+    struct ext2_inode * inode_table = get_block(fs, inode_table_block);
+    return inode_table -1 + inode_num;
 }
 
 
@@ -115,19 +120,19 @@ struct ext2_inode * get_root_dir(void * fs) {
 // name should be a single component: "foo.txt", not "/files/foo.txt".
 __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir, 
         char * name) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_inode_from_dir(fs, dir, name);
+
+    //assert the file system is in dir mode
     assert(LINUX_S_ISDIR(dir->i_mode));
 
     // Iterate over each entry of the directory, looking for a match for name.
-    __u32 block_size = get_block_size(fs);
+    __u32 blockSize = get_block_size(fs);
     void * dir_block = get_block(fs, dir->i_block[0]);
     struct ext2_dir_entry * entry = (struct ext2_dir_entry *) dir_block;
-    void * limit = ((void *) entry) + block_size;
+    void * end = ((void *) entry) + blockSize;
 
     __u32 target_inode = 0;
-    while ((void *) entry < limit) {
-        // Skip unused entries.
+    while ((void *) entry < end) {
+        // check the unused entry first 
         if (entry->inode == 0) {
             continue;
         }
@@ -137,7 +142,7 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
             target_inode = entry->inode;
         }
 
-        // Advance to the next entry.
+        // go to the next dir name.
         entry = (struct ext2_dir_entry *) (((void *) entry) + entry->rec_len);
     }
 
@@ -152,23 +157,22 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
 // Find the inode number for a file by its full path.
 // This is the functionality that ext2cat ultimately needs.
 __u32 get_inode_by_path(void * fs, char * path) {
-    // FIXME: Uses reference implementation.
-    //return _ref_get_inode_by_path(fs, path);
+
     char ** parts = split_path(path);
-    __u32 ino_num = EXT2_ROOT_INO;
+    __u32 ino_number = EXT2_ROOT_INO;
     for (char ** part = parts; *part != NULL; part++) {
-        struct ext2_inode * ino = get_inode(fs, ino_num);
+        struct ext2_inode * ino = get_inode(fs, ino_number);
         if (!LINUX_S_ISDIR(ino->i_mode)) break;
-        ino_num = get_inode_from_dir(fs, ino, *part);
-        if (ino_num == 0) {
+        ino_number = get_inode_from_dir(fs, ino, *part);
+        if (ino_number == 0) {
             break;
         }
     }
 
-    if (ino_num == EXT2_ROOT_INO){
+    if (ino_number == EXT2_ROOT_INO){
         return 0;
     } else {
-        return ino_num;
+        return ino_number;
     }
 }
 
