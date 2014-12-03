@@ -49,6 +49,7 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
     
     __u32 block_size = get_block_size(fs);
     __u32 bgd_block = (SUPERBLOCK_OFFSET / block_size) + 1;
+    printf("the bgd_block is %d\n", bgd_block);
     struct ext2_group_desc * egd;
     egd = get_block(fs, bgd_block);
     return egd;
@@ -59,13 +60,6 @@ struct ext2_group_desc * get_block_group(void * fs, __u32 block_group_num) {
 // would require finding the correct block group, but you may assume it's in the
 // first one.
 struct ext2_inode * get_inode(void * fs, __u32 inode_num) {
-/*
-    struct ext2_group_desc * bgd = get_block_group(fs, 0);
-    __u32 inode_table_block = bgd->bg_inode_table;
-    struct ext2_inode * inode_table = get_block(fs, inode_table_block);
-    // Since inode 0 doesn't ever exist, the table starts from 1.
-    return inode_table + inode_num - 1;
-*/
     struct ext2_group_desc * bgd = get_block_group(fs, 0);
     __u32 inode_table_block = bgd->bg_inode_table;
     struct ext2_inode * inode_table = get_block(fs, inode_table_block);
@@ -124,13 +118,13 @@ __u32 get_inode_from_dir(void * fs, struct ext2_inode * dir,
     //assert the file system is in dir mode
     assert(LINUX_S_ISDIR(dir->i_mode));
 
-    // Iterate over each entry of the directory, looking for a match for name.
     __u32 blockSize = get_block_size(fs);
     void * dir_block = get_block(fs, dir->i_block[0]);
     struct ext2_dir_entry * entry = (struct ext2_dir_entry *) dir_block;
     void * end = ((void *) entry) + blockSize;
 
     __u32 target_inode = 0;
+    // Iterate over each entry of the directory, looking for a match for name.
     while ((void *) entry < end) {
         // check the unused entry first 
         if (entry->inode == 0) {
@@ -162,7 +156,11 @@ __u32 get_inode_by_path(void * fs, char * path) {
     __u32 ino_number = EXT2_ROOT_INO;
     for (char ** part = parts; *part != NULL; part++) {
         struct ext2_inode * ino = get_inode(fs, ino_number);
-        if (!LINUX_S_ISDIR(ino->i_mode)) break;
+
+        //assert the i_mode
+        if (!LINUX_S_ISDIR(ino->i_mode))
+          break;
+
         ino_number = get_inode_from_dir(fs, ino, *part);
         if (ino_number == 0) {
             break;

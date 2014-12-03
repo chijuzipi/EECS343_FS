@@ -1,0 +1,34 @@
+EECS343 Project 4
+Simple File System
+Yu Zhou, Chao Feng
+
+For basic points:
+
+The implementation of the file system is based on the idea of following:
+
+1) get_super_block: is just a simple shift of pointer from fs by the amount of SUPERBLOCK_OFFSET.
+
+2) get_block_size: since the size is stored as logarithmic formate, we need to left shift to get the right size.
+
+3) get_block: it just simply calcuate the pointer shift amount from the fs and return the pointer to the block. 
+
+4)get_block_group: since we only consider one block group in the project, the the block_group_desc is always reside in
+next to the super block, which has the block number of 2. 
+
+5) get_inode: first get the inode table block, retrive the inode table, and calculate the inode pointer based on the
+inode number. 
+
+6) get_inode_from_dir: we first get the dir_block from the dir inode, which contains the dir_block number. Then we
+iterativelly go through the dir_block, try to find the matching entry name with the file name, then return its indoe
+number. 
+
+7) get_inode_by_path: this is the outter function that get the inode from a given file path. We first split the path,
+then call the get_inode_from_dir to retrive the inode number of the requested file. 
+
+For extra points:
+Since the inode contains direct pointers to the data block of a file. If the file is too big, then direct pointer may
+not be enough. Therefore, indirect pointer is needed that each of the pointer point to a block that containes the
+pointer to data blocks. We can use varialbe bytes_read to track how many bytes has been readed, and compare it with the
+file size. After reading the direct block, we go the indirect block, first retrive the pointer of the data block, then
+go for the data. The implementation is in ext2cat.c from line 52 to line 86. NOTE, we also redirect the output to a file
+for checking the md5sum. 

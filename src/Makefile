@@ -1,9 +1,9 @@
 # handin info
-TEAM=`whoami`
+TEAM="yzs572+cfi614"
 VERSION=`date +%Y%m%d%H%M%S`
 PROJ=ext2cat
 
-DELIVERY=ext2cat.c lib/ext2_access.c
+DELIVERY=ext2cat.c lib/ext2_access.c DOC
 ARCHIVE=${TEAM}-${VERSION}-${PROJ}.tar.gz
 OS=$(shell uname -s)
 ARCH=$(shell uname -m)
@@ -21,7 +21,7 @@ handin: clean
 	tar -cvzf ${ARCHIVE} ${DELIVERY}
 
 test-reg: handin
-	HANDIN=`pwd`/${ARCHIVE}; cd testsuite; ./run_testcase.sh $${HANDIN}; rm -f $${HANDIN}
+	HANDIN=`pwd`/${ARCHIVE}; #cd testsuite; ./run_testcase.sh $${HANDIN}; rm -f $${HANDIN}
 
 # Build the final binary against your code with the reference blob.
 ext2cat: ext2_access mmapfs ext2cat.c
